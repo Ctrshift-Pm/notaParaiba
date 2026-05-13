@@ -1,0 +1,14 @@
+.env
+.venv/
+.venv_local/
+venv/
+.tmp/
+node_modules/
+__pycache__/
+*.pyc
+db.sqlite3
+.git/
+.gitignore
+playwright-report/
+test-results/
+.pytest_cache/
