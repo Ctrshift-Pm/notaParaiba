@@ -96,12 +96,25 @@ Formato esperado do contrato (apenas JSON):
   "classificacoes_despesa":[{"categoria":"", "justificativa":""}]
 }
 """
+        category_rules = """
+Mapa oficial de classificacao de despesa:
+- INSUMOS AGRICOLAS: sementes, fertilizantes, defensivos agricolas, fungicidas, herbicidas, inseticidas, pesticidas, adubos e corretivos.
+- MANUTENCAO E OPERACAO: oleo diesel, combustiveis, lubrificantes, pecas, parafusos, pneus, filtros, correias e ferramentas.
+- RECURSOS HUMANOS: mao de obra, salarios, encargos, folha e admissao.
+- SERVICOS OPERACIONAIS: frete, transporte, colheita, secagem, armazenagem e pulverizacao.
+- INFRAESTRUTURA E UTILIDADES: energia, arrendamento, construcao, reforma, material de construcao e material hidraulico.
+- ADMINISTRATIVAS: honorarios, contabil, advocaticio, bancaria e financeira.
+- SEGUROS E PROTECAO: seguro agricola, seguro de ativos, seguro prestamista e seguros.
+- IMPOSTOS E TAXAS: ITR, IPTU, IPVA, INCRA, CCIR e taxas tributarias.
+- INVESTIMENTOS: maquinas, implementos, veiculos, imoveis e infraestrutura rural.
+"""
         return f"""
 Extraia os dados de uma DANFE/NF-e e devolva SOMENTE JSON valido, sem texto adicional, sem explicacoes e sem markdown.
 Entrada: texto cru da nota fiscal:
 \"\"\"{pdf_text[:12000]}\"\"\"
 
 {contract}
+{category_rules}
 Regras:
 - Extrair `fornecedor` como emitente da nota.
 - Extrair `faturado` como destinatario da nota.
@@ -109,6 +122,7 @@ Regras:
 - Extrair `produtos` a partir de itens da nota fiscal.
 - Quando possivel, incluir `unidade`, `valor_unitario`, `valor_total`, `ncm` e `cfop` em cada item.
 - Extrair `parcelas` com os dados de vencimento, duplicatas e incluir `forma_pagamento` quando disponivel.
+- Se a data de vencimento nao existir, usar exatamente a mesma `data_emissao`.
 - Extrair `inscricao_estadual`, `endereco`, `cidade` e `uf` de fornecedor e faturado quando disponiveis.
 - Extrair `valor_produtos`, `valor_desconto`, `valor_frete`, `valor_icms`, `valor_ipi` e `valor_total` quando estiverem no documento.
 - Use listas para `produtos`, `parcelas` e `classificacoes_despesa`, mesmo com 1 item.
@@ -122,6 +136,9 @@ Regras:
   - SEGUROS E PROTECAO
   - IMPOSTOS E TAXAS
   - INVESTIMENTOS
+- Escolha a categoria comparando a descricao dos produtos e servicos com o mapa oficial acima.
+- Nao invente novas categorias, nao misture categorias e nao use termos proximos fora da lista oficial.
+- Se houver ambiguidade, escolha a categoria com maior aderencia semantica ao item principal da nota e explique isso em `justificativa`.
 - `classificacoes_despesa` precisa ser um objeto com `categoria` e `justificativa`, com categoria oficialmente valida.
 - Se algum campo faltar, use string vazia, lista vazia ou 0.
 - Nunca use markdown.

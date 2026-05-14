@@ -464,6 +464,9 @@ class PdfExtractionAgentTests(TestCase):
         self.assertIn("classificacoes_despesa", prompt)
         self.assertIn("duplicatas", prompt)
         self.assertIn("INSUMOS AGRICOLAS", prompt)
+        self.assertIn("Mapa oficial de classificacao de despesa", prompt)
+        self.assertIn("Se a data de vencimento nao existir, usar exatamente a mesma `data_emissao`.", prompt)
+        self.assertIn("Escolha a categoria comparando a descricao dos produtos e servicos com o mapa oficial acima.", prompt)
         self.assertIn("classifique", prompt.lower())
         self.assertIn("somente json", prompt.lower())
 
@@ -531,6 +534,37 @@ class ValidationAgentTests(TestCase):
         self.assertIsInstance(normalized["parcelas"], list)
         self.assertIsInstance(normalized["classificacoes_despesa"], list)
         self.assertEqual(normalized["classificacoes_despesa"][0]["categoria"], "MANUTENCAO E OPERACAO")
+
+    def test_validation_uses_issue_date_when_installment_due_date_is_missing(self) -> None:
+        normalized = self.validator.normalize(
+            {
+                "fornecedor": {"razao_social": "Fornecedor", "fantasia": "Fantasia", "cnpj": "00.000.000/0001-00"},
+                "faturado": {"nome_completo": "Cliente", "cpf": "123.456.789-00"},
+                "numero_nota_fiscal": "123",
+                "data_emissao": "2024-01-01",
+                "produtos": [{"descricao": "item", "quantidade": 1}],
+                "parcelas": [{"numero": 1, "valor": 10}],
+                "valor_total": 10,
+                "classificacoes_despesa": [{"categoria": "MANUTENCAO E OPERACAO", "justificativa": "Teste"}],
+            }
+        )
+
+        self.assertEqual(normalized["parcelas"][0]["data_vencimento"], "2024-01-01")
+
+    def test_validation_uses_issue_date_when_no_installments_exist(self) -> None:
+        normalized = self.validator.normalize(
+            {
+                "fornecedor": {"razao_social": "Fornecedor", "fantasia": "Fantasia", "cnpj": "00.000.000/0001-00"},
+                "faturado": {"nome_completo": "Cliente", "cpf": "123.456.789-00"},
+                "numero_nota_fiscal": "123",
+                "data_emissao": "2024-01-01",
+                "produtos": [{"descricao": "item", "quantidade": 1}],
+                "valor_total": 10,
+                "classificacoes_despesa": [{"categoria": "MANUTENCAO E OPERACAO", "justificativa": "Teste"}],
+            }
+        )
+
+        self.assertEqual(normalized["parcelas"][0]["data_vencimento"], "2024-01-01")
 
     def test_validation_rejects_invalid_classification_shape(self) -> None:
         invalid_data = {

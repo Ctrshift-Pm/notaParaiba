@@ -24,7 +24,7 @@ services:
       DATABASE_URL: postgres://projeto:projeto@db:5432/projeto_paraiba
       GEMINI_API_KEY: ${GEMINI_API_KEY:-}
     ports:
-      - "8000:8000"
+      - "8290:8190"
     volumes:
       - .:/app
     depends_on:

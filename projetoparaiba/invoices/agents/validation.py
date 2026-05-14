@@ -20,6 +20,7 @@ class ValidationAgent:
         if not isinstance(data, dict):
             raise ValueError("Resultado da extracao deve ser um objeto JSON.")
 
+        data_emissao = self._safe_str(data.get("data_emissao") or data.get("dataEmissao"))
         normalized = {
             "fornecedor": self._normalize_nested(
                 data.get("fornecedor"),
@@ -45,7 +46,7 @@ class ValidationAgent:
                 },
             ),
             "numero_nota_fiscal": self._safe_str(data.get("numero_nota_fiscal") or data.get("numero")),
-            "data_emissao": self._safe_str(data.get("data_emissao") or data.get("dataEmissao")),
+            "data_emissao": data_emissao,
             "serie": self._safe_str(data.get("serie")),
             "chave_acesso": self._safe_str(data.get("chave_acesso") or data.get("chaveAcesso")),
             "natureza_operacao": self._safe_str(data.get("natureza_operacao") or data.get("naturezaOperacao")),
@@ -55,7 +56,7 @@ class ValidationAgent:
             "valor_icms": self._number(data.get("valor_icms") or data.get("valorIcms")),
             "valor_ipi": self._number(data.get("valor_ipi") or data.get("valorIpi")),
             "produtos": self._normalize_products(data.get("produtos") or data.get("itens")),
-            "parcelas": self._normalize_installments(data.get("parcelas")),
+            "parcelas": self._normalize_installments(data.get("parcelas"), fallback_date=data_emissao),
             "valor_total": self._number(data.get("valor_total") or data.get("valorTotal")),
             "classificacoes_despesa": self._normalize_classifications(
                 data.get("classificacoes_despesa") or data.get("tipoDespesa") or data.get("despesas")
@@ -65,7 +66,7 @@ class ValidationAgent:
         if not normalized["produtos"]:
             normalized["produtos"] = [{"descricao": "", "quantidade": 0.0}]
         if not normalized["parcelas"]:
-            normalized["parcelas"] = [{"numero": 1, "data_vencimento": "", "valor": normalized["valor_total"]}]
+            normalized["parcelas"] = [{"numero": 1, "data_vencimento": data_emissao, "valor": normalized["valor_total"]}]
         if not normalized["classificacoes_despesa"]:
             normalized["classificacoes_despesa"] = []
 
@@ -149,7 +150,7 @@ class ValidationAgent:
             )
         return normalized
 
-    def _normalize_installments(self, value) -> list[dict]:
+    def _normalize_installments(self, value, *, fallback_date: str = "") -> list[dict]:
         if value is None:
             return []
         items = self._as_list(value)
@@ -157,10 +158,11 @@ class ValidationAgent:
         for item in items:
             if not isinstance(item, dict):
                 continue
+            due_date = self._safe_str(item.get("data_vencimento") or item.get("vencimento") or item.get("data")) or fallback_date
             normalized.append(
                 {
                     "numero": self._integer(item.get("numero") or item.get("parcela") or 1, default=1),
-                    "data_vencimento": self._safe_str(item.get("data_vencimento") or item.get("vencimento") or item.get("data")),
+                    "data_vencimento": due_date,
                     "valor": self._number(item.get("valor") or item.get("valor_total") or 0.0),
                     "forma_pagamento": self._safe_str(item.get("forma_pagamento") or item.get("formaPagamento")),
                 }
