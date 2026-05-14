@@ -8,3 +8,4 @@ db.sqlite3
 playwright-report/
 test-results/
 .pytest_cache/
+.tmp/
